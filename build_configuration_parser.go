@@ -1,14 +1,12 @@
 package gobuild
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/buildkite/interpolate"
-	"gopkg.in/yaml.v2"
 )
 
 type BuildConfiguration struct {
@@ -23,74 +21,35 @@ func NewBuildConfigurationParser() BuildConfigurationParser {
 	return BuildConfigurationParser{}
 }
 
-func (p BuildConfigurationParser) Parse(path string) (BuildConfiguration, error) {
-	var targets []string
-	if val, ok := os.LookupEnv("BP_GO_TARGETS"); ok {
-		targets = filepath.SplitList(val)
-	}
+func (p BuildConfigurationParser) Parse() (BuildConfiguration, error) {
+	var config BuildConfiguration
 
-	file, err := os.Open(path)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			if len(targets) == 0 {
-				targets = []string{"."}
+	config.Targets = []string{"."}
+
+	if targets, ok := os.LookupEnv("BP_GO_BUILD_TARGETS"); ok {
+		config.Targets = filepath.SplitList(targets)
+
+		for index, target := range config.Targets {
+			if strings.HasPrefix(target, string(filepath.Separator)) {
+				return BuildConfiguration{}, fmt.Errorf("failed to determine build targets: %q is an absolute path, targets must be relative to the source directory", target)
 			}
-
-			return BuildConfiguration{Targets: targets}, nil
-		}
-
-		return BuildConfiguration{}, fmt.Errorf("failed to read buildpack.yml: %w", err)
-	}
-
-	var config struct {
-		Go struct {
-			Targets []string `yaml:"targets"`
-			Build   struct {
-				Flags      []string `yaml:"flags"`
-				ImportPath string   `yaml:"import-path"`
-			} `yaml:"build"`
-		} `yaml:"go"`
-	}
-
-	err = yaml.NewDecoder(file).Decode(&config)
-	if err != nil {
-		return BuildConfiguration{}, fmt.Errorf("failed to decode buildpack.yml: %w", err)
-	}
-
-	if len(targets) > 0 {
-		config.Go.Targets = targets
-	}
-
-	env := interpolate.NewSliceEnv(os.Environ())
-
-	var buildFlags []string
-	for _, flag := range config.Go.Build.Flags {
-		for _, f := range splitFlags(flag) {
-			interpolatedFlag, err := interpolate.Interpolate(env, f)
-			if err != nil {
-				return BuildConfiguration{}, fmt.Errorf("environment variable expansion failed: %w", err)
-			}
-			buildFlags = append(buildFlags, interpolatedFlag)
+			config.Targets[index] = fmt.Sprintf("./%s", filepath.Clean(target))
 		}
 	}
-	config.Go.Build.Flags = buildFlags
 
-	for index, target := range config.Go.Targets {
-		if strings.HasPrefix(target, string(filepath.Separator)) {
-			return BuildConfiguration{}, fmt.Errorf("failed to determine build targets: %q is an absolute path, targets must be relative to the source directory", target)
+	if flags, ok := os.LookupEnv("BP_GO_BUILD_FLAGS"); ok {
+		interpolatedFlags, err := interpolate.Interpolate(interpolate.NewSliceEnv(os.Environ()), flags)
+		if err != nil {
+			return BuildConfiguration{}, fmt.Errorf("environment variable expansion failed: %w", err)
 		}
-		config.Go.Targets[index] = fmt.Sprintf("./%s", filepath.Clean(target))
+		for _, f := range strings.Split(interpolatedFlags, ",") {
+			config.Flags = append(config.Flags, splitFlags(f)...)
+		}
 	}
 
-	if len(config.Go.Targets) == 0 {
-		config.Go.Targets = []string{"."}
-	}
+	config.ImportPath = os.Getenv("BP_GO_BUILD_IMPORT_PATH")
 
-	return BuildConfiguration{
-		Targets:    config.Go.Targets,
-		Flags:      config.Go.Build.Flags,
-		ImportPath: config.Go.Build.ImportPath,
-	}, nil
+	return config, nil
 }
 
 func splitFlags(flag string) []string {

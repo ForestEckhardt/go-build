@@ -1,7 +1,6 @@
 package gobuild_test
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -15,44 +14,25 @@ func testBuildConfigurationParser(t *testing.T, context spec.G, it spec.S) {
 	var (
 		Expect = NewWithT(t).Expect
 
-		path string
-
 		parser gobuild.BuildConfigurationParser
 	)
 
 	it.Before(func() {
-		file, err := ioutil.TempFile("", "buildpack.yml")
-		Expect(err).NotTo(HaveOccurred())
-
-		_, err = file.WriteString(`---
-go:
-  targets:
-  - first
-  - ./second
-  build:
-    flags:
-    - -first
-    - value
-    - -second=value
-    - -third="value"
-    - -fourth='value'
-    import-path: some-import-path
-`)
-		Expect(err).NotTo(HaveOccurred())
-
-		Expect(file.Close()).To(Succeed())
-
-		path = file.Name()
+		Expect(os.Setenv("BP_GO_BUILD_TARGETS", "first:./second")).To(Succeed())
+		Expect(os.Setenv("BP_GO_BUILD_FLAGS", `-first=value,-second=value,-third="value",-fourth='value'`)).To(Succeed())
+		Expect(os.Setenv("BP_GO_BUILD_IMPORT_PATH", "some-import-path")).To(Succeed())
 
 		parser = gobuild.NewBuildConfigurationParser()
 	})
 
 	it.After(func() {
-		Expect(os.RemoveAll(path)).To(Succeed())
+		Expect(os.Unsetenv("BP_GO_BUILD_TARGETS")).To(Succeed())
+		Expect(os.Unsetenv("BP_GO_BUILD_FLAGS")).To(Succeed())
+		Expect(os.Unsetenv("BP_GO_IMPORT_PATH")).To(Succeed())
 	})
 
-	it("parses the targets and flags from a buildpack.yml", func() {
-		configuration, err := parser.Parse(path)
+	it("parses the targets and flags from a env vars", func() {
+		configuration, err := parser.Parse()
 		Expect(err).NotTo(HaveOccurred())
 		Expect(configuration).To(Equal(gobuild.BuildConfiguration{
 			Targets: []string{"./first", "./second"},
@@ -66,43 +46,13 @@ go:
 		}))
 	})
 
-	context("when there is no buildpack.yml file", func() {
-		it.Before(func() {
-			Expect(os.Remove(path)).To(Succeed())
-		})
-
-		it("returns a list of targets with . as the only target, and empty list of flags", func() {
-			configuration, err := parser.Parse(path)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(configuration.Targets).To(Equal([]string{"."}))
-			Expect(configuration.Flags).To(BeEmpty())
-		})
-
-		context("BP_GO_TARGETS env variable is set", func() {
-			it.Before(func() {
-				os.Setenv("BP_GO_TARGETS", "./some/target1:./some/target2")
-			})
-
-			it.After(func() {
-				os.Unsetenv("BP_GO_TARGETS")
-			})
-
-			it("uses the values in the env var", func() {
-				configuration, err := parser.Parse(path)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(configuration.Targets).To(Equal([]string{"./some/target1", "./some/target2"}))
-				Expect(configuration.Flags).To(BeEmpty())
-			})
-		})
-	})
-
 	context("when the targets list is empty", func() {
 		it.Before(func() {
-			Expect(ioutil.WriteFile(path, []byte("---\ngo:\n  targets: []\n"), 0644)).To(Succeed())
+			Expect(os.Unsetenv("BP_GO_BUILD_TARGETS")).To(Succeed())
 		})
 
 		it("returns a list of targets with . as the only target", func() {
-			configuration, err := parser.Parse(path)
+			configuration, err := parser.Parse()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(configuration.Targets).To(Equal([]string{"."}))
 		})
@@ -110,15 +60,7 @@ go:
 
 	context("when the build flags reference an env var", func() {
 		it.Before(func() {
-			err := ioutil.WriteFile(path, []byte(`---
-go:
-  build:
-    flags:
-    - -first=${SOME_VALUE}
-    - -second=$SOME_OTHER_VALUE
-`), 0644)
-
-			Expect(err).NotTo(HaveOccurred())
+			Expect(os.Setenv("BP_GO_BUILD_FLAGS", `-first=${SOME_VALUE},-second=$SOME_OTHER_VALUE`)).To(Succeed())
 
 			os.Setenv("SOME_VALUE", "some-value")
 			os.Setenv("SOME_OTHER_VALUE", "some-other-value")
@@ -130,7 +72,7 @@ go:
 		})
 
 		it("replaces the targets list with the values in the env var", func() {
-			configuration, err := parser.Parse(path)
+			configuration, err := parser.Parse()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(configuration.Flags).To(Equal([]string{
 				"-first", "some-value",
@@ -140,48 +82,25 @@ go:
 	})
 
 	context("failure cases", func() {
-		context("when the buildpack.yml file cannot be read", func() {
-			it.Before(func() {
-				Expect(os.Chmod(path, 0000)).To(Succeed())
-			})
-
-			it("returns an error", func() {
-				_, err := parser.Parse(path)
-				Expect(err).To(MatchError(ContainSubstring("failed to read buildpack.yml:")))
-				Expect(err).To(MatchError(ContainSubstring("permission denied")))
-			})
-		})
-
-		context("when the buildpack.yml file cannot be parsed", func() {
-			it.Before(func() {
-				Expect(ioutil.WriteFile(path, []byte("%%%"), 0644)).To(Succeed())
-			})
-
-			it("returns an error", func() {
-				_, err := parser.Parse(path)
-				Expect(err).To(MatchError(ContainSubstring("failed to decode buildpack.yml:")))
-				Expect(err).To(MatchError(ContainSubstring("could not find expected directive name")))
-			})
-		})
 
 		context("when a the env var expansion fails", func() {
 			it.Before(func() {
-				Expect(ioutil.WriteFile(path, []byte("---\ngo:\n  build:\n    flags:\n    - -first=$& \n"), 0644)).To(Succeed())
+				Expect(os.Setenv("BP_GO_BUILD_FLAGS", `-first=$& `)).To(Succeed())
 			})
 
 			it("returns an error", func() {
-				_, err := parser.Parse(path)
+				_, err := parser.Parse()
 				Expect(err).To(MatchError(ContainSubstring("environment variable expansion failed:")))
 			})
 		})
 
 		context("when a target is an absolute path", func() {
 			it.Before(func() {
-				Expect(ioutil.WriteFile(path, []byte("---\ngo:\n  targets: [\"/some-target\"]\n"), 0644)).To(Succeed())
+				Expect(os.Setenv("BP_GO_BUILD_TARGETS", "/some-target")).To(Succeed())
 			})
 
 			it("returns an error", func() {
-				_, err := parser.Parse(path)
+				_, err := parser.Parse()
 				Expect(err).To(MatchError(ContainSubstring("failed to determine build targets: \"/some-target\" is an absolute path, targets must be relative to the source directory")))
 			})
 		})

@@ -58,7 +58,7 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 			},
 		}))
 
-		Expect(parser.ParseCall.Receives.Path).To(Equal(filepath.Join(workingDir, "buildpack.yml")))
+		Expect(parser.ParseCall.CallCount).To(Equal(1))
 	})
 
 	context("when there are multiple targets", func() {
@@ -93,7 +93,7 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 				},
 			}))
 
-			Expect(parser.ParseCall.Receives.Path).To(Equal(filepath.Join(workingDir, "buildpack.yml")))
+			Expect(parser.ParseCall.CallCount).To(Equal(1))
 		})
 	})
 

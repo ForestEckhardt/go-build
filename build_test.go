@@ -143,7 +143,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 		Expect(calculator.SumCall.Receives.Path).To(Equal(workingDir))
 
-		Expect(parser.ParseCall.Receives.Path).To(Equal(filepath.Join(workingDir, "buildpack.yml")))
+		Expect(parser.ParseCall.CallCount).To(Equal(1))
 
 		Expect(pathManager.SetupCall.Receives.Workspace).To(Equal(workingDir))
 		Expect(pathManager.SetupCall.Receives.ImportPath).To(Equal("some-import-path"))

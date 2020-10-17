@@ -91,13 +91,13 @@ func testTargets(t *testing.T, context spec.G, it spec.S) {
 			))
 		})
 
-		context("when building an app with target specified via BP_GO_TARGETS env", func() {
+		context("when building an app with target specified via BP_GO_BUILD_TARGETS env", func() {
 			it("builds successfully", func() {
 				var err error
 				var logs fmt.Stringer
 				image, logs, err = pack.Build.
 					WithPullPolicy("never").
-					WithEnv(map[string]string{"BP_GO_TARGETS": "./third"}).
+					WithEnv(map[string]string{"BP_GO_BUILD_TARGETS": "./third"}).
 					WithBuildpacks(
 						settings.Buildpacks.GoDist.Online,
 						settings.Buildpacks.GoBuild.Online,
@@ -129,9 +129,9 @@ func testTargets(t *testing.T, context spec.G, it spec.S) {
 				))
 			})
 
-			context("when buildpack.yml is missing", func() {
+			context("when project.toml is missing", func() {
 				it.Before(func() {
-					Expect(os.Remove(filepath.Join(source, "buildpack.yml"))).To(Succeed())
+					Expect(os.Remove(filepath.Join(source, "project.toml"))).To(Succeed())
 				})
 
 				it("builds successfully", func() {
@@ -139,7 +139,7 @@ func testTargets(t *testing.T, context spec.G, it spec.S) {
 					var logs fmt.Stringer
 					image, logs, err = pack.Build.
 						WithPullPolicy("never").
-						WithEnv(map[string]string{"BP_GO_TARGETS": "./second"}).
+						WithEnv(map[string]string{"BP_GO_BUILD_TARGETS": "./second"}).
 						WithBuildpacks(
 							settings.Buildpacks.GoDist.Online,
 							settings.Buildpacks.GoBuild.Online,

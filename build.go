@@ -60,7 +60,7 @@ func Build(
 
 		previousSum, _ := targetsLayer.Metadata[WorkspaceSHAKey].(string)
 		if checksum != previousSum {
-			configuration, err := parser.Parse(filepath.Join(context.WorkingDir, "buildpack.yml"))
+			configuration, err := parser.Parse()
 			if err != nil {
 				return packit.BuildResult{}, err
 			}

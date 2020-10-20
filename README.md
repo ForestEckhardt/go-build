@@ -26,7 +26,7 @@ supply another value as the first argument to `package.sh`.
  
 The go.targets property allows you to specify multiple programs to be
 compiled. The first target will be used as the start command for the image.
-`$BP_GO_BUILD_TARGETS=./cmd/web-server:./cmd/debug-server`
+`$BP_GO_TARGETS=./cmd/web-server:./cmd/debug-server`
 
 The go.build.flags property allows you to override the default build
 flags when compiling your program.

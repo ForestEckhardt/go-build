@@ -1,4 +1,4 @@
 [build]
 [[build.env]]
-name='BP_GO_BUILD_TARGETS'
+name='BP_GO_TARGETS'
 value='first:./second'

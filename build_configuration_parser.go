@@ -26,7 +26,7 @@ func (p BuildConfigurationParser) Parse() (BuildConfiguration, error) {
 
 	config.Targets = []string{"."}
 
-	if targets, ok := os.LookupEnv("BP_GO_BUILD_TARGETS"); ok {
+	if targets, ok := os.LookupEnv("BP_GO_TARGETS"); ok {
 		config.Targets = filepath.SplitList(targets)
 
 		for index, target := range config.Targets {

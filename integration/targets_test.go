@@ -91,13 +91,13 @@ func testTargets(t *testing.T, context spec.G, it spec.S) {
 			))
 		})
 
-		context("when building an app with target specified via BP_GO_BUILD_TARGETS env", func() {
+		context("when building an app with target specified via BP_GO_TARGETS env", func() {
 			it("builds successfully", func() {
 				var err error
 				var logs fmt.Stringer
 				image, logs, err = pack.Build.
 					WithPullPolicy("never").
-					WithEnv(map[string]string{"BP_GO_BUILD_TARGETS": "./third"}).
+					WithEnv(map[string]string{"BP_GO_TARGETS": "./third"}).
 					WithBuildpacks(
 						settings.Buildpacks.GoDist.Online,
 						settings.Buildpacks.GoBuild.Online,
@@ -139,7 +139,7 @@ func testTargets(t *testing.T, context spec.G, it spec.S) {
 					var logs fmt.Stringer
 					image, logs, err = pack.Build.
 						WithPullPolicy("never").
-						WithEnv(map[string]string{"BP_GO_BUILD_TARGETS": "./second"}).
+						WithEnv(map[string]string{"BP_GO_TARGETS": "./second"}).
 						WithBuildpacks(
 							settings.Buildpacks.GoDist.Online,
 							settings.Buildpacks.GoBuild.Online,

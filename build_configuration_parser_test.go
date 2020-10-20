@@ -18,7 +18,7 @@ func testBuildConfigurationParser(t *testing.T, context spec.G, it spec.S) {
 	)
 
 	it.Before(func() {
-		Expect(os.Setenv("BP_GO_BUILD_TARGETS", "first:./second")).To(Succeed())
+		Expect(os.Setenv("BP_GO_TARGETS", "first:./second")).To(Succeed())
 		Expect(os.Setenv("BP_GO_BUILD_FLAGS", `-first=value,-second=value,-third="value",-fourth='value'`)).To(Succeed())
 		Expect(os.Setenv("BP_GO_BUILD_IMPORT_PATH", "some-import-path")).To(Succeed())
 
@@ -26,9 +26,9 @@ func testBuildConfigurationParser(t *testing.T, context spec.G, it spec.S) {
 	})
 
 	it.After(func() {
-		Expect(os.Unsetenv("BP_GO_BUILD_TARGETS")).To(Succeed())
+		Expect(os.Unsetenv("BP_GO_TARGETS")).To(Succeed())
 		Expect(os.Unsetenv("BP_GO_BUILD_FLAGS")).To(Succeed())
-		Expect(os.Unsetenv("BP_GO_IMPORT_PATH")).To(Succeed())
+		Expect(os.Unsetenv("BP_GO_BUILD_IMPORT_PATH")).To(Succeed())
 	})
 
 	it("parses the targets and flags from a env vars", func() {
@@ -48,7 +48,7 @@ func testBuildConfigurationParser(t *testing.T, context spec.G, it spec.S) {
 
 	context("when the targets list is empty", func() {
 		it.Before(func() {
-			Expect(os.Unsetenv("BP_GO_BUILD_TARGETS")).To(Succeed())
+			Expect(os.Unsetenv("BP_GO_TARGETS")).To(Succeed())
 		})
 
 		it("returns a list of targets with . as the only target", func() {
@@ -96,7 +96,7 @@ func testBuildConfigurationParser(t *testing.T, context spec.G, it spec.S) {
 
 		context("when a target is an absolute path", func() {
 			it.Before(func() {
-				Expect(os.Setenv("BP_GO_BUILD_TARGETS", "/some-target")).To(Succeed())
+				Expect(os.Setenv("BP_GO_TARGETS", "/some-target")).To(Succeed())
 			})
 
 			it("returns an error", func() {

@@ -22,27 +22,18 @@ $ ./scripts/package.sh
 This builds the buildpack's Go source using `GOOS=linux` by default. You can
 supply another value as the first argument to `package.sh`.
 
-## `buildpack.yml` Configurations
+## Environment Variable Configuration
+ 
+The go.targets property allows you to specify multiple programs to be
+compiled. The first target will be used as the start command for the image.
+`$BP_GO_BUILD_TARGETS=./cmd/web-server:./cmd/debug-server`
 
-```yaml
-go:
-  # The go.targets property allows you to specify multiple programs to be
-  # compiled. The first target will be used as the start command for the image.
-  targets:
-  - ./cmd/web-server
-  - ./cmd/debug-server
+The go.build.flags property allows you to override the default build
+flags when compiling your program.
+`$BP_GO_BUILD_FLAGS='-buildmode=default,-tags=paketo,-ldflags="-X main.variable=some-value"'`
 
-  build:
+The go.build.import-path property allows you to specify an import path
+for your application. This is necessary if you are building a `$GOPATH`
+application that imports its own sub-packages.
+`$BP_GO_BUILD_IMPORT_PATH=example.com/some-app`
 
-    # The go.build.flags property allows you to override the default build
-    # flags when compiling your program.
-    flags:
-    - -buildmode=default
-    - -tags=paketo
-    - -ldflags="-X main.variable=some-value"
-
-    # The go.build.import-path property allows you to specify an import path
-    # for your application. This is necessary if you are building a $GOPATH
-    # application that imports its own sub-packages.
-    import-path: example.com/some-app
-```
